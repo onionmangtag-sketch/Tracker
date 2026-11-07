@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Tasks"><meta name="theme-color" content="#f4f6ff">
+<meta name="apple-mobile-web-app-title" content="Tasks"><meta name="theme-color" content="#f4f6ff"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><script type="module" src="firebase-sync.js"></script>
 <title>Task Tracker</title>
 <style>
 :root{--bg:#f4f6ff;--card:#fff;--ink:#0f1537;--mut:#6b7399;--blue:#3b6ef6;--bl:#e4ebff;--green:#22b35a;--gl:#e3f6ec;--org:#f59e0b;--ol:#fff0dc;--red:#ef4444;--track:#e3e7f6;--sh:0 4px 18px rgba(40,60,140,.08);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
@@ -164,7 +164,7 @@ const isDone=(t,d)=>!!(t.done&&t.done[d]);
 /* storage + sync */
 let db=null,ref=null,saveTimer=null,syncOK=false;
 try{const l=JSON.parse(localStorage.getItem(KEY));if(l&&l.tasks)S=Object.assign(S,l)}catch(e){}
-function persist(){S.upd=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+function persist(){S.upd=Date.now();try{window.TT_save&&window.TT_save(S)}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
  clearTimeout(saveTimer);saveTimer=setTimeout(push,500)}
 async function push(){if(!ref)return;try{await ref.set({json:JSON.stringify({tasks:S.tasks,theme:S.theme,sound:S.sound,notif:S.notif,upd:S.upd})});setSync('Synced to your account')}catch(e){setSync('Sync paused, saved on this device')}}
 function setSync(m){$('#sy').textContent=m}
@@ -278,6 +278,6 @@ setInterval(due,15000);document.addEventListener('visibilitychange',()=>{if(!doc
 /* midnight rollover */
 let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();S.fired={};renderAll()}},30000);
 
-renderAll();setTimeout(due,1500);initSync();
+window.TT={S:()=>S,sync:setSync,toast:toast,confirm:confirmSheet,apply:r=>{S.tasks=r.tasks||[];S.theme=r.theme||S.theme;S.sound=r.sound!==false;S.upd=r.upd;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}renderAll()},reset:()=>{try{localStorage.removeItem(KEY)}catch(e){}S={tasks:[],theme:S.theme,notif:false,sound:true,fired:{},upd:0};renderAll()}};renderAll();setTimeout(due,1500);
 })();
 </script></body></html>
