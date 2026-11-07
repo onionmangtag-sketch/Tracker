@@ -1,0 +1,37 @@
+name: Send reminders
+on:
+  schedule:
+    - cron: '2-57/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: reminders
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Send due reminders
+        working-directory: reminders
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          npm install firebase-admin@12.7.0 --no-audit --no-fund
+          node send.js
+      - name: Keep schedule alive
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt 2592000 ]; then
+            date -u > reminders/.keepalive
+            git config user.name "reminder-bot"
+            git config user.email "reminder-bot@users.noreply.github.com"
+            git add reminders/.keepalive
+            git commit -m "Keep reminders schedule active"
+            git push
+          fi
