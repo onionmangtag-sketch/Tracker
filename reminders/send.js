@@ -3,7 +3,7 @@
 const admin = require('firebase-admin');
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
 const db = admin.firestore();
-const AHEAD = 1, GRACE = 90; // minutes: send up to 4 min early, catch up to 90 min late
+const AHEAD = 2, GRACE = 90; // minutes: send up to 4 min early, catch up to 90 min late
 const pad = n => String(n).padStart(2, '0');
 const dow = d => new Date(d + 'T00:00:00Z').getUTCDay();
 const t12 = t => { const [h, m] = t.split(':').map(Number); return (h % 12 || 12) + ':' + pad(m) + ' ' + (h < 12 ? 'AM' : 'PM'); };
