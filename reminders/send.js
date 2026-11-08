@@ -33,16 +33,20 @@ function occurs(t, d) {
     const next = {};
     for (const [k, v] of Object.entries(data.sent || {})) if ((k.split('_')[1] || '') >= cutoff) next[k] = v;
 
-    const due = [];
+        const due = [];
+    const shift = n => new Date(Date.parse(now.date + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
     for (const t of s.tasks || []) {
-      if (!t.time || !/^\d\d:\d\d$/.test(t.time) || !occurs(t, now.date)) continue;
-      if (t.done && t.done[now.date]) continue;
-      const key = `${t.id}_${now.date}_${t.time}`;
-      if (next[key]) continue;
+      if (!t.time || !/^\d\d:\d\d$/.test(t.time)) continue;
       const [h, m] = t.time.split(':').map(Number);
-      const diff = now.min - (h * 60 + m);
-      if (diff >= -AHEAD && diff <= GRACE) due.push([t, key]);
-    }
+      for (const off of [-1, 0, 1]) { // yesterday, today, tomorrow: handles midnight crossings
+        const d = shift(off);
+        if (!occurs(t, d) || (t.done && t.done[d])) continue;
+        const key = `${t.id}_${d}_${t.time}`;
+        if (next[key]) continue;
+        const diff = now.min - (off * 1440 + h * 60 + m);
+        if (diff >= -AHEAD && diff <= GRACE) due.push([t, key]);
+      }
+    } 
     if (!due.length) continue;
 
     const dev = await u.ref.collection('devices').get();
