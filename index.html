@@ -55,6 +55,10 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .bars .r{display:flex;align-items:center;gap:10px;margin:12px 0;font-weight:500}
 .bars .r span:first-child{width:36px}.bars .r span:last-child{width:42px;text-align:right;color:var(--mut);font-size:14px}.bars .track{flex:1}
 .field{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:20px;padding:6px 8px 6px 18px;box-shadow:var(--sh);margin-bottom:14px;border:1.5px solid var(--track)}
+.note{display:block;background:var(--card);border-radius:20px;box-shadow:var(--sh);margin-bottom:14px;border:1.5px solid var(--track);padding:12px 18px}
+.note textarea{display:block;width:100%;border:0;background:none;color:var(--ink);font:inherit;font-size:17px;outline:0;resize:none;min-height:66px;padding:0}
+.note small{display:block;text-align:right;color:var(--mut);font-size:13px;margin-top:4px}
+.tt .nt{color:var(--mut);font-size:14px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .field input{flex:1;border:0;background:none;color:var(--ink);font:inherit;font-size:20px;padding:14px 0;outline:0;min-width:0}
 .list{background:var(--card);border-radius:20px;box-shadow:var(--sh);margin-bottom:14px;overflow:hidden}
 .li{display:flex;align-items:center;gap:14px;padding:15px 16px;width:100%;text-align:left;position:relative;font-size:17px}
@@ -106,6 +110,7 @@ nav svg{width:30px;height:30px}
 <section class="scr full" id="add">
  <div class="top"><button class="ib" data-back aria-label="Back"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="aT">Add Task</h1><button class="sav" id="save" disabled>Save</button></div>
  <div class="field"><input id="title" placeholder="Task Title..." maxlength="80" autocomplete="off"><button class="ib" id="clr" aria-label="Clear" style="color:var(--mut)">✕</button></div>
+ <label class="note"><textarea id="note" rows="3" maxlength="200" placeholder="📝 Reminder note (optional)..." aria-label="Reminder note"></textarea><small id="nc">0/200</small></label>
  <div class="list"><label class="li"><span style="font-size:24px">🕒</span><span class="t">Time</span><span class="val" id="tv">None</span><span style="color:var(--mut)">›</span><input type="time" id="time"></label>
  <button class="li" id="pr"><span style="font-size:24px">☐</span><span class="t">Priority</span><span class="val" id="pv">Normal</span><span style="color:var(--mut)">›</span></button></div>
  <div class="lab" style="text-transform:none;font-size:15px">Repeat</div>
@@ -185,7 +190,7 @@ async function initSync(){
 const C=364.4;
 function ring(id,rate){requestAnimationFrame(()=>{$(id).style.strokeDashoffset=C*(1-rate)})}
 function counts(){const d=today(),a=dayTasks(d),c=a.filter(t=>isDone(t,d)).length;return{n:a.length,c,p:a.length-c,rate:a.length?c/a.length:0}}
-function rowHTML(t,d,i,label){const dn=isDone(t,d);return`<div class="row ${dn?'done':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+t.repeat:''}</span>`:''}</button><button class="del" aria-label="Delete">🗑</button></div>`}
+function rowHTML(t,d,i,label){const dn=isDone(t,d);return`<div class="row ${dn?'done':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+t.repeat:''}</span>`:''}</button><button class="del" aria-label="Delete">🗑</button></div>`}
 function renderHome(){
  const d=today(),k=counts();$('#hT').textContent=k.n;$('#hC').firstChild.nodeValue=k.c;$('#hP').firstChild.nodeValue=k.p;ring('#r1',k.rate);
  $('#tf').style.width=Math.round(k.rate*100)+'%';
@@ -220,14 +225,15 @@ document.addEventListener('click',e=>{unlock();const g=e.target.closest('[data-g
 /* add / edit */
 const REP=[['never','Never'],['daily','Daily'],['weekdays','Weekdays'],['weekly','Weekly']],PR=['normal','high','low'];
 function openAdd(id){editId=id||null;const t=id&&S.tasks.find(x=>x.id===id);
- form=t?{title:t.title,time:t.time,prio:t.prio,repeat:t.repeat,date:t.date}:{title:'',time:'',prio:'normal',repeat:'never',date:today()};
+ form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date}:{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today()};
  $('#aT').textContent=t?'Edit Task':'Add Task';fillForm();go('add');setTimeout(()=>{if(!t)$('#title').focus()},380)}
-function fillForm(){$('#title').value=form.title;$('#time').value=form.time||'';$('#tv').textContent=form.time?t12(form.time):'None';$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
+function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#nc').textContent=form.note.length+'/200';$('#time').value=form.time||'';$('#tv').textContent=form.time?t12(form.time):'None';$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
  $('#date').value=form.date;$('#dv').textContent=form.date===today()?'Today':new Date(form.date+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
  $('#rep').innerHTML=REP.map(r=>`<button data-r="${r[0]}" class="${form.repeat===r[0]?'a':''}">${r[1]}</button>`).join('');chk()}
 function chk(){$('#save').disabled=!form.title.trim()}
 $('#title').addEventListener('input',e=>{form.title=e.target.value;chk()});
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter')$('#save').click()});
+$('#note').addEventListener('input',e=>{form.note=e.target.value;$('#nc').textContent=form.note.length+'/200'});
 $('#clr').onclick=()=>{form.title='';$('#title').value='';chk();$('#title').focus()};
 $('#time').addEventListener('input',e=>{form.time=e.target.value;$('#tv').textContent=form.time?t12(form.time):'None'});
 $('#tv').addEventListener('click',e=>{if(form.time){e.preventDefault();form.time='';$('#time').value='';$('#tv').textContent='None'}});
@@ -235,9 +241,9 @@ $('#date').addEventListener('input',e=>{if(e.target.value){form.date=e.target.va
 $('#pr').onclick=()=>{form.prio=PR[(PR.indexOf(form.prio)+1)%3];fillForm()};
 $('#rep').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b){form.repeat=b.dataset.r;fillForm()}});
 $('#plus').onclick=()=>openAdd();$('#navAdd').onclick=()=>openAdd();
-$('#save').onclick=()=>{const title=form.title.trim();if(!title)return;
- if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,{title});delete S.fired[editId+form.date]}
- else S.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,done:{}});
+$('#save').onclick=()=>{const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
+ if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,{title,note});delete S.fired[editId+form.date]}
+ else S.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,note,time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,done:{}});
  persist();go('home');showAll=false;renderHome();toast(editId?'Task updated ✓':'Task added ✓')};
 
 /* list actions */
@@ -270,8 +276,8 @@ let tm;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on
 function due(){const n=new Date(),d=today(),now=pad(n.getHours())+':'+pad(n.getMinutes());let any=false;
  dayTasks(d).forEach(t=>{if(!t.time||isDone(t,d))return;const k=t.id+d;if(S.fired[k]||t.time>now)return;S.fired[k]=1;any=true;
   const [h,m]=t.time.split(':').map(Number);if((n.getHours()*60+n.getMinutes())-(h*60+m)>30)return;
-  if(!S.notif)return;chime();toast('⏰ '+t.title+' · '+t12(t.time));if(navigator.vibrate)try{navigator.vibrate([200,100,200])}catch(e){}
-  if(notifOK())try{new Notification('Task Tracker',{body:t.title+' at '+t12(t.time)})}catch(e){}});
+  if(!S.notif)return;chime();toast('⏰ '+t.title+' · '+t12(t.time)+(t.note?' — '+t.note:''));if(navigator.vibrate)try{navigator.vibrate([200,100,200])}catch(e){}
+  if(notifOK())try{new Notification('Task Tracker',{body:t.title+' at '+t12(t.time)+(t.note?'\n📝 '+t.note:'')})}catch(e){}});
  if(any)try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 setInterval(due,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){due();renderHome()}});
 
