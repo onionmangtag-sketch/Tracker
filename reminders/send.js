@@ -12,12 +12,20 @@ function local(tz) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute };
 }
+const U = d => new Date(d + 'T00:00:00Z');
+const mdays = d => { const x = U(d); return new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate(); };
+// Keep in sync with occurs() in index.html.
 function occurs(t, d) {
   if (d < t.date) return false;
+  const a = U(t.date), b = U(d);
   switch (t.repeat) {
     case 'daily': return true;
     case 'weekdays': return dow(d) > 0 && dow(d) < 6;
     case 'weekly': return dow(d) === dow(t.date);
+    case 'biweekly': return Math.round((b - a) / 864e5) % 14 === 0;
+    case 'monthly': return b.getUTCDate() === Math.min(a.getUTCDate(), mdays(d));
+    case 'yearly': return b.getUTCMonth() === a.getUTCMonth() && b.getUTCDate() === Math.min(a.getUTCDate(), mdays(d));
+    case 'custom': return (t.days || []).includes(dow(d));
     default: return d === t.date;
   }
 }
