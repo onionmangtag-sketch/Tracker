@@ -75,6 +75,10 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .opts{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 16px}
 .opts button{padding:9px 15px;border-radius:18px;background:var(--bl);font-weight:600;font-size:15px;transition:all .2s}
 .opts .a{background:var(--blue);color:#fff}
+.days{display:flex;gap:6px;padding:0 16px 14px}
+.days button{flex:1;aspect-ratio:1;max-width:44px;border-radius:50%;background:var(--bl);font-weight:700;font-size:15px;transition:all .2s}
+.days .a{background:var(--blue);color:#fff}
+.rh{color:var(--mut);font-size:14px;padding:0 18px 14px;margin-top:-4px}
 .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
 .sw{width:50px;height:30px;border-radius:20px;background:var(--track);position:relative;transition:background .25s;flex:none}
 .sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .25s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
@@ -114,7 +118,7 @@ nav svg{width:30px;height:30px}
  <div class="list"><label class="li"><span style="font-size:24px">🕒</span><span class="t">Time</span><span class="val" id="tv">None</span><span style="color:var(--mut)">›</span><input type="time" id="time"></label>
  <button class="li" id="pr"><span style="font-size:24px">☐</span><span class="t">Priority</span><span class="val" id="pv">Normal</span><span style="color:var(--mut)">›</span></button></div>
  <div class="lab" style="text-transform:none;font-size:15px">Repeat</div>
- <div class="list"><div class="opts" id="rep" style="padding-top:16px"></div></div>
+ <div class="list"><div class="opts" id="rep" style="padding-top:16px"></div><div class="days" id="days" hidden></div><div class="rh" id="rh"></div></div>
  <div class="lab" style="text-transform:none;font-size:15px">Date</div>
  <div class="list"><label class="li"><span style="font-size:24px">📅</span><span class="t">Day</span><span class="val" id="dv">Today</span><span style="color:var(--mut)">›</span><input type="date" id="date"></label></div>
 </section>
@@ -162,7 +166,11 @@ const today=()=>dkey(new Date());
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const t12=t=>{if(!t)return'';let[h,m]=t.split(':').map(Number);return(h%12||12)+':'+pad(m)+' '+(h<12?'AM':'PM')};
 const dow=d=>new Date(d+'T00:00').getDay();
-function occurs(t,d){if(d<t.date)return false;switch(t.repeat){case'daily':return true;case'weekdays':return dow(d)>0&&dow(d)<6;case'weekly':return dow(d)===dow(t.date);default:return d===t.date}}
+const U=d=>new Date(d+'T00:00:00Z'),mdays=d=>{const x=U(d);return new Date(Date.UTC(x.getUTCFullYear(),x.getUTCMonth()+1,0)).getUTCDate()};
+function occurs(t,d){if(d<t.date)return false;const a=U(t.date),b=U(d);switch(t.repeat){case'daily':return true;case'weekdays':return dow(d)>0&&dow(d)<6;case'weekly':return dow(d)===dow(t.date);case'biweekly':return Math.round((b-a)/864e5)%14===0;case'monthly':return b.getUTCDate()===Math.min(a.getUTCDate(),mdays(d));case'yearly':return b.getUTCMonth()===a.getUTCMonth()&&b.getUTCDate()===Math.min(a.getUTCDate(),mdays(d));case'custom':return(t.days||[]).includes(dow(d));default:return d===t.date}}
+function nextOcc(t,d){if(t.repeat==='never')return t.date;let x=d>t.date?d:t.date;for(let i=0;i<400;i++){if(occurs(t,x))return x;const n=U(x);n.setUTCDate(n.getUTCDate()+1);x=n.toISOString().slice(0,10)}return x}
+const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],ord=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
+function repLabel(t){const a=U(t.date);switch(t.repeat){case'daily':return'Daily';case'weekdays':return'Weekdays';case'weekly':return'Every '+DN[dow(t.date)];case'biweekly':return'Every other '+DN[dow(t.date)];case'monthly':return'Monthly on the '+ord(a.getUTCDate());case'yearly':return'Yearly on '+a.toLocaleDateString(undefined,{month:'short',day:'numeric',timeZone:'UTC'});case'custom':return(t.days||[]).length===7?'Every day':[...(t.days||[])].sort().map(i=>DN[i]).join(', ');default:return''}}
 const dayTasks=d=>S.tasks.filter(t=>occurs(t,d));
 const isDone=(t,d)=>!!(t.done&&t.done[d]);
 
@@ -190,7 +198,7 @@ async function initSync(){
 const C=364.4;
 function ring(id,rate){requestAnimationFrame(()=>{$(id).style.strokeDashoffset=C*(1-rate)})}
 function counts(){const d=today(),a=dayTasks(d),c=a.filter(t=>isDone(t,d)).length;return{n:a.length,c,p:a.length-c,rate:a.length?c/a.length:0}}
-function rowHTML(t,d,i,label){const dn=isDone(t,d);return`<div class="row ${dn?'done':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+t.repeat:''}</span>`:''}</button><button class="del" aria-label="Delete">🗑</button></div>`}
+function rowHTML(t,d,i,label){const dn=isDone(t,d);return`<div class="row ${dn?'done':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+repLabel(t):''}</span>`:''}</button><button class="del" aria-label="Delete">🗑</button></div>`}
 function renderHome(){
  const d=today(),k=counts();$('#hT').textContent=k.n;$('#hC').firstChild.nodeValue=k.c;$('#hP').firstChild.nodeValue=k.p;ring('#r1',k.rate);
  $('#tf').style.width=Math.round(k.rate*100)+'%';
@@ -198,7 +206,7 @@ function renderHome(){
  $('#hh').textContent=showAll?'All Tasks':'Today';$('#all').textContent=showAll?'Show Today':'Show All';
  let h='';
  if(!showAll){const l=dayTasks(d).sort((a,b)=>(isDone(a,d)-isDone(b,d))||(a.time||'99').localeCompare(b.time||'99'));l.forEach((t,i)=>h+=rowHTML(t,d,i));if(!l.length)h='<div class="empty">Nothing planned for today.<br>Tap + to add a task.</div>'}
- else{const l=[...S.tasks].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));l.forEach((t,i)=>{const dd=t.repeat==='never'?t.date:(t.date>d?t.date:d);h+=rowHTML(t,dd,i,t.repeat==='never'?(t.date===d?'':new Date(t.date+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})):'')});if(!l.length)h='<div class="empty">No tasks yet.</div>'}
+ else{const l=[...S.tasks].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));l.forEach((t,i)=>{const dd=nextOcc(t,d);h+=rowHTML(t,dd,i,dd===d?'':new Date(dd+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))});if(!l.length)h='<div class="empty">No tasks yet.</div>'}
  $('#list').innerHTML=h}
 function streakOf(){let s=0,dt=new Date();for(let i=0;i<400;i++){const k=dkey(dt),a=dayTasks(k);if(a.length){if(a.every(t=>isDone(t,k)))s++;else if(i>0)break;else{}}else if(i>0&&s===0)break;dt.setDate(dt.getDate()-1)}return s}
 function renderStats(){
@@ -223,14 +231,17 @@ function go(n){if(n===cur)return;cur=n;$$('.scr').forEach(s=>s.classList.toggle(
 document.addEventListener('click',e=>{unlock();const g=e.target.closest('[data-go]');if(g)go(g.dataset.go);if(e.target.closest('[data-back]'))go('home')});
 
 /* add / edit */
-const REP=[['never','Never'],['daily','Daily'],['weekdays','Weekdays'],['weekly','Weekly']],PR=['normal','high','low'];
+const REP=[['never','Never'],['daily','Daily'],['weekdays','Weekdays'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly'],['custom','Custom days']],PR=['normal','high','low'];
 function openAdd(id){editId=id||null;const t=id&&S.tasks.find(x=>x.id===id);
- form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date}:{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today()};
+ form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date,days:[...(t.days||[])]}:{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today(),days:[]};
  $('#aT').textContent=t?'Edit Task':'Add Task';fillForm();go('add');setTimeout(()=>{if(!t)$('#title').focus()},380)}
 function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#nc').textContent=form.note.length+'/200';$('#time').value=form.time||'';$('#tv').textContent=form.time?t12(form.time):'None';$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
  $('#date').value=form.date;$('#dv').textContent=form.date===today()?'Today':new Date(form.date+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
- $('#rep').innerHTML=REP.map(r=>`<button data-r="${r[0]}" class="${form.repeat===r[0]?'a':''}">${r[1]}</button>`).join('');chk()}
-function chk(){$('#save').disabled=!form.title.trim()}
+ $('#rep').innerHTML=REP.map(r=>`<button data-r="${r[0]}" class="${form.repeat===r[0]?'a':''}">${r[1]}</button>`).join('');
+ const cu=form.repeat==='custom';$('#days').hidden=!cu;$('#days').innerHTML=DN.map((n,i)=>`<button data-day="${i}" class="${form.days.includes(i)?'a':''}" aria-label="${n}" aria-pressed="${form.days.includes(i)}">${n[0]}</button>`).join('');
+ $('#rh').textContent=form.repeat==='never'||form.repeat==='daily'||form.repeat==='weekdays'?'':cu?'Tap the days this repeats':'Repeats '+repLabel(form).replace(/^Every/,'every').replace(/^Monthly/,'monthly').replace(/^Yearly/,'yearly')+' · change the Date below to adjust';
+ $('#rh').hidden=!$('#rh').textContent;chk()}
+function chk(){$('#save').disabled=!form.title.trim()||(form.repeat==='custom'&&!form.days.length)}
 $('#title').addEventListener('input',e=>{form.title=e.target.value;chk()});
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter')$('#save').click()});
 $('#note').addEventListener('input',e=>{form.note=e.target.value;$('#nc').textContent=form.note.length+'/200'});
@@ -239,11 +250,12 @@ $('#time').addEventListener('input',e=>{form.time=e.target.value;$('#tv').textCo
 $('#tv').addEventListener('click',e=>{if(form.time){e.preventDefault();form.time='';$('#time').value='';$('#tv').textContent='None'}});
 $('#date').addEventListener('input',e=>{if(e.target.value){form.date=e.target.value;fillForm()}});
 $('#pr').onclick=()=>{form.prio=PR[(PR.indexOf(form.prio)+1)%3];fillForm()};
-$('#rep').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b){form.repeat=b.dataset.r;fillForm()}});
+$('#rep').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b){form.repeat=b.dataset.r;if(form.repeat==='custom'&&!form.days.length)form.days=[dow(form.date)];fillForm()}});
+$('#days').addEventListener('click',e=>{const b=e.target.closest('[data-day]');if(!b)return;const i=+b.dataset.day;form.days=form.days.includes(i)?form.days.filter(x=>x!==i):[...form.days,i].sort();fillForm()});
 $('#plus').onclick=()=>openAdd();$('#navAdd').onclick=()=>openAdd();
 $('#save').onclick=()=>{const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
- if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,{title,note});delete S.fired[editId+form.date]}
- else S.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,note,time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,done:{}});
+ if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,{title,note,days:form.repeat==='custom'?form.days:undefined});delete S.fired[editId+form.date]}
+ else S.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,note,time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,...(form.repeat==='custom'?{days:form.days}:{}),done:{}});
  persist();go('home');showAll=false;renderHome();toast(editId?'Task updated ✓':'Task added ✓')};
 
 /* list actions */
