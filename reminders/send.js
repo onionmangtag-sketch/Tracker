@@ -58,7 +58,7 @@ function occurs(t, d) {
       if (!tokens.length) break;
       const res = await admin.messaging().sendEachForMulticast({
         tokens,
-        data: { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}`, tag: key },
+        data: { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}${t.note ? '\n📝 ' + t.note : ''}`, tag: key },
         webpush: { headers: { Urgency: 'high', TTL: '3600' } },
       });
       res.responses.forEach((r, i) => {
