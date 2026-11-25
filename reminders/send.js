@@ -17,6 +17,8 @@ const mdays = d => { const x = U(d); return new Date(Date.UTC(x.getUTCFullYear()
 // Keep in sync with occurs() in index.html.
 function occurs(t, d) {
   if (d < t.date) return false;
+  if (t.repeat !== 'never' && t.until && d > t.until) return false; // repeat end date
+  if (Array.isArray(t.skip) && t.skip.includes(d)) return false;    // skipped occurrences
   const a = U(t.date), b = U(d);
   switch (t.repeat) {
     case 'daily': return true;
