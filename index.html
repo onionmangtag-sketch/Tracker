@@ -38,6 +38,14 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .row{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:16px;padding:13px 14px;margin-bottom:8px;box-shadow:var(--sh);animation:in .35s both;transition:opacity .3s,transform .3s}
 .row.gone{opacity:0;transform:translateX(40px)}
 .row{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+[hidden]{display:none!important}
+.grp{color:var(--mut);font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;margin:16px 6px 8px}
+.grp:first-child{margin-top:2px}
+.od .chip{background:color-mix(in srgb,var(--red) 16%,var(--card));color:var(--red)}
+.mv{background:var(--bl);color:var(--blue);border-radius:14px;padding:7px 11px;font-weight:700;font-size:14px;flex:none}
+.mv:active{transform:scale(.92)}
+.low .n{color:var(--mut)}
+#q::-webkit-search-cancel-button{display:none}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .cal b{text-align:center;color:var(--mut);font-size:12px;font-weight:600;padding-bottom:2px}
 .cal button{aspect-ratio:1;border-radius:9px;background:var(--track);font-size:13px;font-weight:600;display:grid;place-items:center;transition:transform .15s}
@@ -120,7 +128,8 @@ nav svg{width:30px;height:30px}
  <div class="top"><button class="ib" data-go="settings" aria-label="Menu"><svg width="30" height="30" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><h1>Task Tracker</h1><button class="ib fab" id="plus" aria-label="Add task"><svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
  <div class="card sum"><div class="ringw"><svg width="132" height="132" viewBox="0 0 132 132"><circle cx="66" cy="66" r="58" fill="none" stroke="var(--track)" stroke-width="13"/><circle class="ring" id="r1" cx="66" cy="66" r="58" fill="none" stroke="var(--blue)" stroke-width="13" stroke-linecap="round" stroke-dasharray="364.4" stroke-dashoffset="364.4"/></svg><div class="c"><b id="hT">0</b><span>Total<br>Tasks</span></div></div><div class="sn"><div id="hC" style="color:var(--green)">0<small>Completed</small></div><div id="hP" style="color:var(--org);margin-top:10px;border-top:1px solid var(--track);padding-top:10px">0<small>Pending</small></div></div></div>
  <div class="trophy"><span style="font-size:34px">🏆</span><div style="flex:1"><div id="msg" style="font-weight:600">Add a task to get started</div><div class="bar"><div class="fill" id="tf"></div></div></div></div>
- <div class="sec"><h2 id="hh">Today</h2><button class="pill" id="all">Show All</button></div>
+ <div class="seg" id="vw" style="margin:2px 0 12px"><button data-v="today" style="flex:1;font-size:15px;padding:10px 8px">Today</button><button data-v="up" style="flex:1;font-size:15px;padding:10px 8px">Upcoming</button><button data-v="all" style="flex:1;font-size:15px;padding:10px 8px">All</button></div>
+ <div class="field" id="qf" hidden style="padding:2px 6px 2px 16px;margin-bottom:12px"><span aria-hidden="true">🔍</span><input id="q" type="search" placeholder="Search tasks and notes..." autocomplete="off" aria-label="Search tasks" style="font-size:17px;padding:11px 0"><button class="ib" id="qx" aria-label="Clear search" style="color:var(--mut)">✕</button></div>
  <div id="list"></div>
 </section>
 
@@ -159,7 +168,7 @@ nav svg{width:30px;height:30px}
  <button class="li" id="im"><span class="ico" style="background:var(--bl)">📥</span><span class="t">Import backup<small>Restore tasks from a backup file</small></span></button><input type="file" id="imF" accept="application/json,.json" hidden>
  <button class="li" id="cd"><span class="ico" style="background:#fde4e4">🗑️</span><span class="t">Clear Data<small>Remove all tasks and stats</small></span></button></div>
  <div class="lab">About</div>
- <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.1.0</small></span></div></div>
+ <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.2.0</small></span></div></div>
  <button class="logout" id="lo">Log Out</button>
 </section>
 
@@ -175,7 +184,7 @@ nav svg{width:30px;height:30px}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const KEY='tt_state_v1';
 let S={tasks:[],theme:'system',notif:false,sound:true,fired:{},upd:0};
-let cur='home',showAll=false,editId=null,form={};
+let cur='home',view='today',q='',editId=null,form={};
 const pad=n=>String(n).padStart(2,'0');
 const dkey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const today=()=>dkey(new Date());
@@ -214,15 +223,26 @@ async function initSync(){
 const C=364.4;
 function ring(id,rate){requestAnimationFrame(()=>{$(id).style.strokeDashoffset=C*(1-rate)})}
 function counts(){const d=today(),a=dayTasks(d),c=a.filter(t=>isDone(t,d)).length;return{n:a.length,c,p:a.length-c,rate:a.length?c/a.length:0}}
-function rowHTML(t,d,i,label){const dn=isDone(t,d);return`<div class="row ${dn?'done':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+repLabel(t):''}</span>`:''}</button><button class="del" aria-label="Delete">🗑</button></div>`}
+const PO={high:0,normal:1,low:2},pri=t=>PO[t.prio]??1;
+const sorter=d=>(a,b)=>(isDone(a,d)-isDone(b,d))||pri(a)-pri(b)||(a.time||'99').localeCompare(b.time||'99');
+const fmtD=d=>new Date(d+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+const isOver=(t,d)=>t.repeat==='never'&&t.date<d&&!isDone(t,t.date);
+function rowHTML(t,d,i,label){const dn=isDone(t,d),od=t.repeat==='never'&&d<today()&&!dn;if(od)label='Overdue · '+new Date(d+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
+ return`<div class="row ${dn?'done':''} ${od?'od':''} ${t.prio==='low'?'low':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${t.time||label||t.repeat!=='never'?`<span class="chip">${t.time?t12(t.time)+' ⏰':''}${label?(t.time?' · ':'')+label:''}${t.repeat!=='never'?(t.time||label?' · ':'')+'🔁 '+repLabel(t):''}</span>`:''}</button>${od?'<button class="mv" aria-label="Move to today">Today</button>':''}<button class="del" aria-label="Delete">🗑</button></div>`}
 function renderHome(){
  const d=today(),k=counts();$('#hT').textContent=k.n;$('#hC').firstChild.nodeValue=k.c;$('#hP').firstChild.nodeValue=k.p;ring('#r1',k.rate);
  $('#tf').style.width=Math.round(k.rate*100)+'%';
  $('#msg').textContent=!k.n?'Add a task to get started':k.c===k.n?'All done today! Great work 🎉':k.c+' of '+k.n+' done, keep going!';
- $('#hh').textContent=showAll?'All Tasks':'Today';$('#all').textContent=showAll?'Show Today':'Show All';
- let h='';
- if(!showAll){const l=dayTasks(d).sort((a,b)=>(isDone(a,d)-isDone(b,d))||(a.time||'99').localeCompare(b.time||'99'));l.forEach((t,i)=>h+=rowHTML(t,d,i));if(!l.length)h='<div class="empty">Nothing planned for today.<br>Tap + to add a task.</div>'}
- else{const l=[...S.tasks].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));l.forEach((t,i)=>{const dd=nextOcc(t,d);h+=rowHTML(t,dd,i,dd===d?'':new Date(dd+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))});if(!l.length)h='<div class="empty">No tasks yet.</div>'}
+ $$('#vw button').forEach(b=>b.classList.toggle('a',b.dataset.v===view));$('#qf').hidden=view!=='all';
+ let h='',i=0;const grp=s=>`<div class="grp">${s}</div>`;
+ if(view==='today'){const od=S.tasks.filter(t=>isOver(t,d)).sort((a,b)=>a.date.localeCompare(b.date)||pri(a)-pri(b)),l=dayTasks(d).sort(sorter(d));
+  if(od.length){h+=grp('Overdue · '+od.length);od.forEach(t=>h+=rowHTML(t,t.date,i++));h+=grp('Today')}
+  l.forEach(t=>h+=rowHTML(t,d,i++));if(!l.length)h+='<div class="empty">Nothing planned for today.<br>Tap + to add a task.</div>'}
+ else if(view==='up'){const x=new Date();for(let n=1;n<=7;n++){x.setDate(x.getDate()+1);const k=dkey(x),l=dayTasks(k).sort(sorter(k));if(!l.length)continue;h+=grp(n===1?'Tomorrow':fmtD(k));l.forEach(t=>h+=rowHTML(t,k,i++))}
+  if(!h)h='<div class="empty">Nothing planned for the next 7 days.</div>'}
+ else{const s=q.trim().toLowerCase(),l=S.tasks.filter(t=>!s||t.title.toLowerCase().includes(s)||(t.note||'').toLowerCase().includes(s)).map(t=>[t,nextOcc(t,d)])
+   .sort((a,b)=>a[1].localeCompare(b[1])||pri(a[0])-pri(b[0])||(a[0].time||'99').localeCompare(b[0].time||'99'));
+  l.forEach(([t,dd])=>h+=rowHTML(t,dd,i++,dd===d?'':fmtD(dd)));if(!l.length)h=`<div class="empty">${S.tasks.length?'No tasks match “'+esc(q.trim())+'”':'No tasks yet.'}</div>`}
  $('#list').innerHTML=h}
 function streakOf(){let s=0,dt=new Date();for(let i=0;i<400;i++){const k=dkey(dt),a=dayTasks(k);if(a.length){if(a.every(t=>isDone(t,k)))s++;else if(i>0)break;else{}}else if(i>0&&s===0)break;dt.setDate(dt.getDate()-1)}return s}
 function renderStats(){
@@ -287,12 +307,15 @@ $('#plus').onclick=()=>openAdd();$('#navAdd').onclick=()=>openAdd();
 $('#save').onclick=()=>{const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
  if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,{title,note,days:form.repeat==='custom'?form.days:undefined});delete S.fired[editId+form.date]}
  else S.tasks.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,note,time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,...(form.repeat==='custom'?{days:form.days}:{}),done:{}});
- persist();go('home');showAll=false;renderHome();
+ const ahead=Math.round((U(form.date)-U(today()))/864e5);view=ahead<=0?'today':ahead<=7?'up':'all';q='';$('#q').value='';
+ persist();go('home');renderHome();
  let tip=false;if(!editId)try{if(!localStorage.getItem('tt_swipetip')){localStorage.setItem('tt_swipetip','1');tip=true}}catch(x){}
  toast(editId?'Task updated ✓':tip?'Task added ✓ Tip: swipe right to complete, left to delete':'Task added ✓')};
 
 /* list actions */
-$('#all').onclick=()=>{showAll=!showAll;renderHome()};
+$('#vw').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b&&b.dataset.v!==view){view=b.dataset.v;renderHome()}});
+$('#q').addEventListener('input',e=>{q=e.target.value;renderHome()});
+$('#qx').onclick=()=>{q='';$('#q').value='';renderHome();$('#q').focus()};
 function toggleDone(row,t){t.done=t.done||{};const d=row.dataset.d;t.done[d]?delete t.done[d]:t.done[d]=true;if(t.done[d]&&navigator.vibrate)try{navigator.vibrate(12)}catch(x){}
  if(t.done[d])tick();persist();row.classList.toggle('done');setTimeout(renderHome,260)}
 function delTask(row,t){row.classList.add('gone');setTimeout(()=>{const i=S.tasks.findIndex(x=>x.id===t.id);if(i<0)return;S.tasks.splice(i,1);persist();renderHome();renderStats();
@@ -301,6 +324,7 @@ let lastSwipe=0;
 $('#list').addEventListener('click',e=>{if(Date.now()-lastSwipe<400)return;const row=e.target.closest('.row');if(!row)return;const t=S.tasks.find(x=>x.id===row.dataset.id);if(!t)return;
  if(e.target.closest('.chk'))toggleDone(row,t);
  else if(e.target.closest('.del'))delTask(row,t);
+ else if(e.target.closest('.mv')){t.date=today();persist();renderHome();renderStats();toast('Moved to today ✓')}
  else if(e.target.closest('.tt'))openAdd(t.id)});
 
 /* swipe: right = complete, left = delete */
