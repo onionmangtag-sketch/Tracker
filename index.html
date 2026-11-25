@@ -97,6 +97,15 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .sub input,.li .inl{flex:1;border:0;background:none;color:var(--ink);font:inherit;font-size:17px;outline:0;min-width:0;padding:0}
 .sub button{color:var(--mut);width:32px;height:32px}
 #bfr+.li{border-top:1px solid var(--track)}
+.qa{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-6px 4px 14px;font-size:14px;color:var(--mut)}
+.qa span{background:var(--bl);color:var(--ink);border-radius:12px;padding:4px 10px;font-weight:600}
+.qa button{color:var(--blue);font-weight:700;padding:4px 6px}
+.nx{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 16px;margin:-4px 0 16px}
+.nx .w{font-size:13px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.nx .n2{font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx .in{margin-left:auto;flex:none;background:var(--bl);color:var(--blue);border-radius:14px;padding:6px 11px;font-weight:700;font-size:14px}
+.nx.late .in{background:color-mix(in srgb,var(--red) 16%,var(--card));color:var(--red)}
+.dup{width:100%;background:var(--bl);color:var(--blue);border-radius:18px;padding:15px;font-weight:600;font-size:17px;margin:4px 0 20px}
 #shA{background:var(--bl)}
 .lab{color:var(--mut);font-weight:600;margin:18px 6px 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
 .sav{background:var(--blue);color:#fff;border-radius:22px;padding:11px 22px;font-weight:600;transition:transform .15s,opacity .2s}
@@ -141,6 +150,7 @@ nav svg{width:30px;height:30px}
  <div class="top"><button class="ib" data-go="settings" aria-label="Menu"><svg width="30" height="30" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><h1>Task Tracker</h1><button class="ib fab" id="plus" aria-label="Add task"><svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
  <div class="card sum"><div class="ringw"><svg width="132" height="132" viewBox="0 0 132 132"><circle cx="66" cy="66" r="58" fill="none" stroke="var(--track)" stroke-width="13"/><circle class="ring" id="r1" cx="66" cy="66" r="58" fill="none" stroke="var(--blue)" stroke-width="13" stroke-linecap="round" stroke-dasharray="364.4" stroke-dashoffset="364.4"/></svg><div class="c"><b id="hT">0</b><span>Total<br>Tasks</span></div></div><div class="sn"><div id="hC" style="color:var(--green)">0<small>Completed</small></div><div id="hP" style="color:var(--org);margin-top:10px;border-top:1px solid var(--track);padding-top:10px">0<small>Pending</small></div></div></div>
  <div class="trophy"><span style="font-size:34px">🏆</span><div style="flex:1"><div id="msg" style="font-weight:600">Add a task to get started</div><div class="bar"><div class="fill" id="tf"></div></div></div></div>
+ <button class="card nx" id="nx" hidden></button>
  <div class="seg" id="vw" style="margin:2px 0 12px"><button data-v="today" style="flex:1;font-size:15px;padding:10px 8px">Today</button><button data-v="up" style="flex:1;font-size:15px;padding:10px 8px">Upcoming</button><button data-v="all" style="flex:1;font-size:15px;padding:10px 8px">All</button></div>
  <div class="lf" id="lf" hidden></div>
  <div class="field" id="qf" hidden style="padding:2px 6px 2px 16px;margin-bottom:12px"><span aria-hidden="true">🔍</span><input id="q" type="search" placeholder="Search tasks and notes..." autocomplete="off" aria-label="Search tasks" style="font-size:17px;padding:11px 0"><button class="ib" id="qx" aria-label="Clear search" style="color:var(--mut)">✕</button></div>
@@ -149,7 +159,8 @@ nav svg{width:30px;height:30px}
 
 <section class="scr full" id="add">
  <div class="top"><button class="ib" data-back aria-label="Back"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="aT">Add Task</h1><button class="sav" id="save" disabled>Save</button></div>
- <div class="field"><input id="title" placeholder="Task Title..." maxlength="80" autocomplete="off"><button class="ib" id="clr" aria-label="Clear" style="color:var(--mut)">✕</button></div>
+ <div class="field"><input id="title" placeholder="e.g. Dentist tomorrow 3pm #Health" maxlength="80" autocomplete="off"><button class="ib" id="clr" aria-label="Clear" style="color:var(--mut)">✕</button></div>
+ <div class="qa" id="qa" hidden aria-live="polite"></div>
  <label class="note"><textarea id="note" rows="3" maxlength="200" placeholder="📝 Reminder note (optional)..." aria-label="Reminder note"></textarea><small id="nc">0/200</small></label>
  <div class="list"><label class="li"><span style="font-size:24px">🕒</span><span class="t">Time</span><span class="val" id="tv">None</span><span style="color:var(--mut)">›</span><input type="time" id="time"></label>
  <div id="bfr" hidden><div class="rh" style="padding:2px 18px 10px;margin:0">🔔 Remind me</div><div class="opts" id="bf"></div></div>
@@ -163,6 +174,7 @@ nav svg{width:30px;height:30px}
  <div class="list"><div class="opts" id="lists" style="padding-top:16px"></div><div class="li" id="nlr" hidden style="padding-top:0"><span style="font-size:20px">🏷</span><input class="inl" id="nl" maxlength="20" placeholder="New list name, then Enter" autocomplete="off" aria-label="New list name"></div></div>
  <div class="lab" style="text-transform:none;font-size:15px">Checklist</div>
  <div class="list"><div id="subl"></div><div class="li"><span style="font-size:20px;color:var(--blue)">＋</span><input class="inl" id="subNew" maxlength="60" placeholder="Add a checklist item" autocomplete="off" aria-label="Add a checklist item"></div></div>
+ <button class="dup" id="dup" hidden>⧉ Duplicate this task</button>
 </section>
 
 <section class="scr" id="stats">
@@ -188,7 +200,7 @@ nav svg{width:30px;height:30px}
  <button class="li" id="im"><span class="ico" style="background:var(--bl)">📥</span><span class="t">Import backup<small>Restore tasks from a backup file</small></span></button><input type="file" id="imF" accept="application/json,.json" hidden>
  <button class="li" id="cd"><span class="ico" style="background:#fde4e4">🗑️</span><span class="t">Clear Data<small>Remove all tasks and stats</small></span></button></div>
  <div class="lab">About</div>
- <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.4.0</small></span></div></div>
+ <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.5.0</small></span></div></div>
  <button class="logout" id="lo">Log Out</button>
 </section>
 
@@ -274,7 +286,15 @@ function renderHome(){
    .sort((a,b)=>(a[2]-b[2])||a[1].localeCompare(b[1])||pri(a[0])-pri(b[0])||(a[0].time||'99').localeCompare(b[0].time||'99'));
   l.forEach(([t,dd,end])=>h+=rowHTML(t,dd,i++,end?'Ended':dd===d?'':fmtD(dd)));
   if(!l.length)h=`<div class="empty">${!S.tasks.length?'No tasks yet.':s?'No tasks match “'+esc(q.trim())+'”':'No tasks in this list.'}</div>`}
- $('#list').innerHTML=h}
+ $('#list').innerHTML=h;renderNext();badge()}
+function untilTxt(m){const a=Math.abs(m);const s=a<60?a+' min':Math.floor(a/60)+' h'+(a%60?' '+a%60+' min':'');return m<=0?(a<2?'Due now':s+' ago'):'in '+s}
+function renderNext(){const n=new Date(),nowM=n.getHours()*60+n.getMinutes(),d=today();
+ const c=dayTasks(d).filter(t=>t.time&&!isDone(t,d)).map(t=>{const[h,m]=t.time.split(':').map(Number);return[t,h*60+m-nowM]}).filter(x=>x[1]>=-60).sort((a,b)=>a[1]-b[1])[0];
+ const el=$('#nx');el.hidden=!c;if(!c)return;const[t,m]=c;el.dataset.id=t.id;el.classList.toggle('late',m<-1);
+ el.innerHTML=`<span style="font-size:24px">${m<=0?'⏰':'⏭️'}</span><span style="min-width:0"><span class="w">${m<-1?'Overdue':m<=0?'Now':'Up next'} · ${t12(t.time)}</span><div class="n2">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div></span><span class="in">${untilTxt(m)}</span>`}
+$('#nx').onclick=()=>{const id=$('#nx').dataset.id;if(id)openAdd(id)};
+setInterval(()=>{if(cur==='home'&&!document.hidden)renderNext()},30000);
+function badge(){try{const d=today(),n=counts().p+S.tasks.filter(t=>isOver(t,d)).length;if(navigator.setAppBadge)n?navigator.setAppBadge(n).catch(()=>{}):navigator.clearAppBadge().catch(()=>{})}catch(e){}}
 function streakOf(){let s=0,dt=new Date();for(let i=0;i<400;i++){const k=dkey(dt),a=dayTasks(k);if(a.length){if(a.every(t=>isDone(t,k)))s++;else if(i>0)break;else{}}else if(i>0&&s===0)break;dt.setDate(dt.getDate()-1)}return s}
 function renderStats(){
  const k=counts();$('#sT').textContent=k.n;$('#sC').textContent=k.c;$('#sP').textContent=k.p;$('#sR').textContent=Math.round(k.rate*100)+'%';$('#sF').style.width=Math.round(k.rate*100)+'%';ring('#r2',k.rate);
@@ -317,7 +337,7 @@ const REP=[['never','Never'],['daily','Daily'],['weekdays','Weekdays'],['weekly'
 function openAdd(id){editId=id||null;const t=id&&S.tasks.find(x=>x.id===id);
  form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date,days:[...(t.days||[])],until:t.until||'',list:t.list||'',sub:subs(t).map(s=>({...s})),before:+t.before||0}
   :{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today(),days:[],until:'',list:listF,sub:[],before:0};
- $('#nlr').hidden=true;$('#nl').value='';$('#subNew').value='';
+ $('#nlr').hidden=true;$('#nl').value='';$('#subNew').value='';$('#dup').hidden=!t;
  $('#aT').textContent=t?'Edit Task':'Add Task';fillForm();go('add');setTimeout(()=>{if(!t)$('#title').focus()},380)}
 function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#nc').textContent=form.note.length+'/200';$('#time').value=form.time||'';fillBefore();$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
  $('#date').value=form.date;$('#dv').textContent=form.date===today()?'Today':new Date(form.date+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
@@ -329,11 +349,48 @@ function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#
  $('#ur').hidden=form.repeat==='never';$('#until').min=form.date;$('#until').value=form.until||'';$('#uv').textContent=form.until?short(form.until):'Never';
  const ls=allLists();if(form.list&&!ls.includes(form.list))ls.push(form.list);
  $('#lists').innerHTML=[['','None'],...ls.map(x=>[x,'🏷 '+x])].map(([v,l])=>`<button data-l="${esc(v)}" class="${v===form.list?'a':''}">${esc(l)}</button>`).join('')+'<button data-new>＋ New list</button>';
- fillSubs();chk()}
+ fillSubs();fillQA();chk()}
 function allLists(){return[...new Set(S.tasks.map(t=>t.list).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
 function fillSubs(){$('#subl').innerHTML=form.sub.map(s=>`<div class="li sub" data-sid="${s.id}"><span style="color:var(--mut)">☐</span><input value="${esc(s.t)}" maxlength="60" aria-label="Checklist item"><button data-rm aria-label="Remove item">✕</button></div>`).join('')}
 function chk(){$('#save').disabled=!form.title.trim()||(form.repeat==='custom'&&!form.days.length)}
-$('#title').addEventListener('input',e=>{form.title=e.target.value;chk()});
+/* quick add: "Dentist tomorrow 3pm #Health !high every week" */
+const WDN=['sun','mon','tue','wed','thu','fri','sat'],MON=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const addDays=(d,n)=>{const x=U(d);x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
+const WDRE='(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tues|tue|wed|thurs|thur|thu|fri|sat)';
+function parseQuick(str){const td=today(),o={};let r=' '+str+' ';
+ const take=(re,fn)=>{r=r.replace(re,(...m)=>fn(...m)===false?m[0]:' ')},B='(?=[\\s,.;]|$)';
+ take(new RegExp('\\s(every\\s+other\\s+week|every\\s+2\\s+weeks|biweekly|fortnightly)'+B,'i'),()=>{o.repeat='biweekly'});
+ take(new RegExp('\\s(every\\s*day|daily)'+B,'i'),()=>{o.repeat='daily'});
+ take(new RegExp('\\s(every\\s+weekday|weekdays)'+B,'i'),()=>{o.repeat='weekdays'});
+ take(new RegExp('\\severy\\s+'+WDRE+B,'i'),(m,w)=>{o.repeat='weekly';o.wd=WDN.indexOf(w.slice(0,3).toLowerCase())});
+ take(new RegExp('\\s(every\\s+week|weekly)'+B,'i'),()=>{o.repeat='weekly'});
+ take(new RegExp('\\s(every\\s+month|monthly)'+B,'i'),()=>{o.repeat='monthly'});
+ take(new RegExp('\\s(every\\s+year|yearly|annually)'+B,'i'),()=>{o.repeat='yearly'});
+ take(new RegExp('\\s(!high|!h|!!)'+B,'i'),()=>{o.prio='high'});
+ take(new RegExp('\\s(!low|!l)'+B,'i'),()=>{o.prio='low'});
+ take(/\s#([\p{L}\p{N}_-]{1,20})(?=[\s,.;]|$)/u,(m,n)=>{o.list=allLists().find(x=>x.toLowerCase()===n.toLowerCase())||n});
+ take(new RegExp('\\s(?:at\\s+)?(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a\\.m\\.|p\\.m\\.)'+B,'i'),(m,h,mi,ap)=>{h=+h;mi=+(mi||0);if(h<1||h>12||mi>59)return false;
+  if(/p/i.test(ap)&&h<12)h+=12;if(/a/i.test(ap)&&h===12)h=0;o.time=pad(h)+':'+pad(mi)});
+ if(!o.time)take(new RegExp('\\s(?:at\\s+)?([01]?\\d|2[0-3]):([0-5]\\d)'+B,'i'),(m,h,mi)=>{o.time=pad(+h)+':'+mi});
+ if(!o.time)take(new RegExp('\\s(?:at\\s+)?(noon|midday|midnight)'+B,'i'),(m,w)=>{o.time=w.toLowerCase()==='midnight'?'00:00':'12:00'});
+ if(!o.time)take(new RegExp('\\sat\\s+(\\d{1,2})'+B,'i'),(m,h)=>{h=+h;if(h<1||h>12)return false;o.time=pad(h<7?h+12:h)+':00'});
+ take(new RegExp('\\s(today|tonight)'+B,'i'),(m,w)=>{o.date=td;if(/night/i.test(w)&&!o.time)o.time='20:00'});
+ take(new RegExp('\\s(tomorrow|tmrw|tmr)'+B,'i'),()=>{o.date=addDays(td,1)});
+ take(new RegExp('\\sin\\s+(\\d{1,3})\\s+(days?|weeks?)'+B,'i'),(m,n,u)=>{o.date=addDays(td,+n*(/w/i.test(u)?7:1))});
+ const md=(mo,dd)=>{const y=+td.slice(0,4);let k=y+'-'+pad(mo)+'-'+pad(dd);if(mo<1||mo>12||dd<1||dd>mdays(y+'-'+pad(mo)+'-01'))return false;if(k<td)k=(y+1)+k.slice(4);o.date=k};
+ take(new RegExp('\\s(?:on\\s+)?('+MON.join('|')+')[a-z]*\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?'+B,'i'),(m,mo,dd)=>md(MON.indexOf(mo.slice(0,3).toLowerCase())+1,+dd));
+ take(new RegExp('\\s(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+('+MON.join('|')+')[a-z]*'+B,'i'),(m,dd,mo)=>md(MON.indexOf(mo.slice(0,3).toLowerCase())+1,+dd));
+ take(new RegExp('\\s(?:on\\s+)?(\\d{1,2})/(\\d{1,2})'+B,'i'),(m,mo,dd)=>md(+mo,+dd));
+ if(!o.date)take(new RegExp('\\s(?:on\\s+)?(?:next\\s+)?'+WDRE+B,'i'),(m,w)=>{const n=(WDN.indexOf(w.slice(0,3).toLowerCase())-dow(td)+7)%7||7;o.date=addDays(td,n)});
+ if(o.wd!=null&&!o.date)o.date=addDays(td,(o.wd-dow(td)+7)%7);
+ if(o.repeat&&!o.date)o.date=td;delete o.wd;
+ const title=r.replace(/\s+/g,' ').trim();if(!Object.keys(o).length||!title)return null;return{title,set:o}}
+function qaLabel(o){const r=REP.find(x=>x[0]===o.repeat);return[o.date&&(o.date===today()?'Today':o.date===addDays(today(),1)?'Tomorrow':fmtD(o.date)),o.time&&t12(o.time),
+ o.prio&&(o.prio==='high'?'❗ High':'Low priority'),o.list&&'🏷 '+o.list,r&&'🔁 '+r[1]].filter(Boolean)}
+function fillQA(){const p=!editId&&!form.raw&&parseQuick(form.title||'');$('#qa').hidden=!p;
+ if(p)$('#qa').innerHTML='✨ '+qaLabel(p.set).map(x=>'<span>'+esc(x)+'</span>').join('')+'<button id="qaOff">Keep as typed</button>'}
+$('#qa').addEventListener('click',e=>{if(e.target.id==='qaOff'){form.raw=true;fillQA();$('#title').focus()}});
+$('#title').addEventListener('input',e=>{form.title=e.target.value;chk();fillQA()});
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter')$('#save').click()});
 $('#note').addEventListener('input',e=>{form.note=e.target.value;$('#nc').textContent=form.note.length+'/200'});
 $('#clr').onclick=()=>{form.title='';$('#title').value='';chk();$('#title').focus()};
@@ -360,8 +417,13 @@ $('#subNew').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault
 $('#subNew').addEventListener('blur',addSub);
 $('#subl').addEventListener('input',e=>{const r=e.target.closest('[data-sid]');const s=r&&form.sub.find(x=>x.id===r.dataset.sid);if(s)s.t=e.target.value});
 $('#subl').addEventListener('click',e=>{if(!e.target.closest('[data-rm]'))return;const r=e.target.closest('[data-sid]');form.sub=form.sub.filter(x=>x.id!==r.dataset.sid);fillSubs()});
+$('#dup').onclick=()=>{const t=S.tasks.find(x=>x.id===editId);if(!t)return;const c=JSON.parse(JSON.stringify(t));
+ c.id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);c.done={};delete c.snz;delete c.sd;delete c.skip;
+ S.tasks.splice(S.tasks.indexOf(t)+1,0,c);persist();openAdd(c.id);$('#aT').textContent='Edit Copy';toast('Duplicated ✓ You are now editing the copy')};
 $('#plus').onclick=()=>openAdd();$('#navAdd').onclick=()=>openAdd();
-$('#save').onclick=()=>{addSub();addList();const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
+$('#save').onclick=()=>{addSub();addList();
+ const qp=!editId&&!form.raw&&parseQuick(form.title||'');if(qp){Object.assign(form,qp.set);form.title=qp.title;if(form.repeat!=='custom')form.days=[];if(!form.time)form.before=0}
+ const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
  const extra={title,note,days:form.repeat==='custom'?form.days:undefined,until:form.repeat!=='never'&&form.until||undefined,list:form.list||undefined,before:form.time&&form.before?form.before:undefined,
   sub:form.sub.map(s=>({id:s.id,t:s.t.trim()})).filter(s=>s.t)};if(!extra.sub.length)extra.sub=undefined;
  if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,extra);for(const k of['days','until','list','sub','before'])if(t[k]===undefined)delete t[k];for(const k in S.fired)if(k.startsWith(editId))delete S.fired[k]}
