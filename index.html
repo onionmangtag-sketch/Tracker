@@ -96,6 +96,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .si.on i{background:var(--green);border-color:var(--green);color:#fff}.si.on span{text-decoration:line-through;color:var(--mut)}
 .sub input,.li .inl{flex:1;border:0;background:none;color:var(--ink);font:inherit;font-size:17px;outline:0;min-width:0;padding:0}
 .sub button{color:var(--mut);width:32px;height:32px}
+#bfr+.li{border-top:1px solid var(--track)}
 #shA{background:var(--bl)}
 .lab{color:var(--mut);font-weight:600;margin:18px 6px 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
 .sav{background:var(--blue);color:#fff;border-radius:22px;padding:11px 22px;font-weight:600;transition:transform .15s,opacity .2s}
@@ -151,6 +152,7 @@ nav svg{width:30px;height:30px}
  <div class="field"><input id="title" placeholder="Task Title..." maxlength="80" autocomplete="off"><button class="ib" id="clr" aria-label="Clear" style="color:var(--mut)">✕</button></div>
  <label class="note"><textarea id="note" rows="3" maxlength="200" placeholder="📝 Reminder note (optional)..." aria-label="Reminder note"></textarea><small id="nc">0/200</small></label>
  <div class="list"><label class="li"><span style="font-size:24px">🕒</span><span class="t">Time</span><span class="val" id="tv">None</span><span style="color:var(--mut)">›</span><input type="time" id="time"></label>
+ <div id="bfr" hidden><div class="rh" style="padding:2px 18px 10px;margin:0">🔔 Remind me</div><div class="opts" id="bf"></div></div>
  <button class="li" id="pr"><span style="font-size:24px">☐</span><span class="t">Priority</span><span class="val" id="pv">Normal</span><span style="color:var(--mut)">›</span></button></div>
  <div class="lab" style="text-transform:none;font-size:15px">Repeat</div>
  <div class="list"><div class="opts" id="rep" style="padding-top:16px"></div><div class="days" id="days" hidden></div><div class="rh" id="rh"></div>
@@ -186,7 +188,7 @@ nav svg{width:30px;height:30px}
  <button class="li" id="im"><span class="ico" style="background:var(--bl)">📥</span><span class="t">Import backup<small>Restore tasks from a backup file</small></span></button><input type="file" id="imF" accept="application/json,.json" hidden>
  <button class="li" id="cd"><span class="ico" style="background:#fde4e4">🗑️</span><span class="t">Clear Data<small>Remove all tasks and stats</small></span></button></div>
  <div class="lab">About</div>
- <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.3.0</small></span></div></div>
+ <div class="list"><div class="li"><span class="ico" style="background:var(--bl)">ℹ️</span><span class="t">About<small>Version 1.4.0</small></span></div></div>
  <button class="logout" id="lo">Log Out</button>
 </section>
 
@@ -251,7 +253,7 @@ let listF='',exp=new Set();
 function subsHTML(t,d){const on=new Set(subDone(t,d));return`<div class="subs" data-id="${t.id}" data-d="${d}">${subs(t).map(s=>`<button class="si ${on.has(s.id)?'on':''}" data-sid="${s.id}" aria-pressed="${on.has(s.id)}"><i>✓</i><span>${esc(s.t)}</span></button>`).join('')}</div>`}
 function rowHTML(t,d,i,label){const dn=isDone(t,d),od=t.repeat==='never'&&d<today()&&!dn;if(od)label='Overdue · '+short(d);
  const n=subs(t).length,c=n?subDone(t,d).length:0,key=t.id+'|'+d,open=n&&exp.has(key);
- const chip=[t.time&&t12(t.time)+' ⏰',label,t.repeat!=='never'&&'🔁 '+repLabel(t)+(t.until?' until '+short(t.until):''),t.list&&!listF&&'🏷 '+esc(t.list)].filter(Boolean).join(' · ');
+ const chip=[t.time&&t12(t.time)+' ⏰'+(t.before?' −'+(t.before>=60?t.before/60+'h':t.before+'m'):''),label,t.repeat!=='never'&&'🔁 '+repLabel(t)+(t.until?' until '+short(t.until):''),t.list&&!listF&&'🏷 '+esc(t.list)].filter(Boolean).join(' · ');
  return`<div class="row ${dn?'done':''} ${od?'od':''} ${t.prio==='low'?'low':''}" data-id="${t.id}" data-d="${d}" style="animation-delay:${Math.min(i,8)*35}ms"><button class="chk" aria-label="Toggle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><button class="tt"><div class="n">${t.prio==='high'?'❗ ':''}${esc(t.title)}</div>${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}${chip?`<span class="chip">${chip}</span>`:''}</button>${n?`<button class="sx ${c===n?'all':''}" aria-expanded="${!!open}" aria-label="Checklist ${c} of ${n} done">☑ ${c}/${n}</button>`:''}${od?'<button class="mv" aria-label="Move to today">Today</button>':''}<button class="del" aria-label="Delete">🗑</button></div>${open?subsHTML(t,d):''}`}
 function renderHome(){
  const d=today(),k=counts();$('#hT').textContent=k.n;$('#hC').firstChild.nodeValue=k.c;$('#hP').firstChild.nodeValue=k.p;ring('#r1',k.rate);
@@ -313,11 +315,11 @@ document.addEventListener('click',e=>{unlock();const g=e.target.closest('[data-g
 /* add / edit */
 const REP=[['never','Never'],['daily','Daily'],['weekdays','Weekdays'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly'],['custom','Custom days']],PR=['normal','high','low'];
 function openAdd(id){editId=id||null;const t=id&&S.tasks.find(x=>x.id===id);
- form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date,days:[...(t.days||[])],until:t.until||'',list:t.list||'',sub:subs(t).map(s=>({...s}))}
-  :{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today(),days:[],until:'',list:listF,sub:[]};
+ form=t?{title:t.title,note:t.note||'',time:t.time,prio:t.prio,repeat:t.repeat,date:t.date,days:[...(t.days||[])],until:t.until||'',list:t.list||'',sub:subs(t).map(s=>({...s})),before:+t.before||0}
+  :{title:'',note:'',time:'',prio:'normal',repeat:'never',date:today(),days:[],until:'',list:listF,sub:[],before:0};
  $('#nlr').hidden=true;$('#nl').value='';$('#subNew').value='';
  $('#aT').textContent=t?'Edit Task':'Add Task';fillForm();go('add');setTimeout(()=>{if(!t)$('#title').focus()},380)}
-function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#nc').textContent=form.note.length+'/200';$('#time').value=form.time||'';$('#tv').textContent=form.time?t12(form.time):'None';$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
+function fillForm(){$('#title').value=form.title;$('#note').value=form.note;$('#nc').textContent=form.note.length+'/200';$('#time').value=form.time||'';fillBefore();$('#pv').textContent=form.prio[0].toUpperCase()+form.prio.slice(1);
  $('#date').value=form.date;$('#dv').textContent=form.date===today()?'Today':new Date(form.date+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
  $('#rep').innerHTML=REP.map(r=>`<button data-r="${r[0]}" class="${form.repeat===r[0]?'a':''}">${r[1]}</button>`).join('');
  const cu=form.repeat==='custom';$('#days').hidden=!cu;$('#days').innerHTML=DN.map((n,i)=>`<button data-day="${i}" class="${form.days.includes(i)?'a':''}" aria-label="${n}" aria-pressed="${form.days.includes(i)}">${n[0]}</button>`).join('');
@@ -335,8 +337,12 @@ $('#title').addEventListener('input',e=>{form.title=e.target.value;chk()});
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter')$('#save').click()});
 $('#note').addEventListener('input',e=>{form.note=e.target.value;$('#nc').textContent=form.note.length+'/200'});
 $('#clr').onclick=()=>{form.title='';$('#title').value='';chk();$('#title').focus()};
-$('#time').addEventListener('input',e=>{form.time=e.target.value;$('#tv').textContent=form.time?t12(form.time):'None'});
-$('#tv').addEventListener('click',e=>{if(form.time){e.preventDefault();form.time='';$('#time').value='';$('#tv').textContent='None'}});
+$('#time').addEventListener('input',e=>{form.time=e.target.value;fillBefore()});
+$('#tv').addEventListener('click',e=>{if(form.time){e.preventDefault();form.time='';$('#time').value='';fillBefore()}});
+const BF=[[0,'At time'],[5,'5 min before'],[15,'15 min before'],[30,'30 min before'],[60,'1 hour before']];
+function fillBefore(){$('#tv').textContent=form.time?t12(form.time):'None';$('#bfr').hidden=!form.time;
+ $('#bf').innerHTML=BF.map(([v,l])=>`<button data-b="${v}" class="${(+form.before||0)===v?'a':''}">${l}</button>`).join('')}
+$('#bf').addEventListener('click',e=>{const b=e.target.closest('[data-b]');if(b){form.before=+b.dataset.b;fillBefore()}});
 $('#date').addEventListener('input',e=>{if(e.target.value){form.date=e.target.value;fillForm()}});
 $('#pr').onclick=()=>{form.prio=PR[(PR.indexOf(form.prio)+1)%3];fillForm()};
 $('#rep').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b){form.repeat=b.dataset.r;if(form.repeat==='custom'&&!form.days.length)form.days=[dow(form.date)];fillForm()}});
@@ -356,9 +362,9 @@ $('#subl').addEventListener('input',e=>{const r=e.target.closest('[data-sid]');c
 $('#subl').addEventListener('click',e=>{if(!e.target.closest('[data-rm]'))return;const r=e.target.closest('[data-sid]');form.sub=form.sub.filter(x=>x.id!==r.dataset.sid);fillSubs()});
 $('#plus').onclick=()=>openAdd();$('#navAdd').onclick=()=>openAdd();
 $('#save').onclick=()=>{addSub();addList();const title=form.title.trim(),note=(form.note||'').trim();if(!title)return;
- const extra={title,note,days:form.repeat==='custom'?form.days:undefined,until:form.repeat!=='never'&&form.until||undefined,list:form.list||undefined,
+ const extra={title,note,days:form.repeat==='custom'?form.days:undefined,until:form.repeat!=='never'&&form.until||undefined,list:form.list||undefined,before:form.time&&form.before?form.before:undefined,
   sub:form.sub.map(s=>({id:s.id,t:s.t.trim()})).filter(s=>s.t)};if(!extra.sub.length)extra.sub=undefined;
- if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,extra);for(const k of['days','until','list','sub'])if(t[k]===undefined)delete t[k];delete S.fired[editId+form.date]}
+ if(editId){const t=S.tasks.find(x=>x.id===editId);Object.assign(t,form,extra);for(const k of['days','until','list','sub','before'])if(t[k]===undefined)delete t[k];for(const k in S.fired)if(k.startsWith(editId))delete S.fired[k]}
  else{const t={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),time:form.time,prio:form.prio,repeat:form.repeat,date:form.date,done:{},...extra};
   for(const k in t)if(t[k]===undefined)delete t[k];S.tasks.push(t)}
  if(listF&&listF!==(form.list||''))listF=form.list||'';
@@ -434,6 +440,8 @@ function cleanTask(t,i){const done={};if(t.done&&typeof t.done==='object')for(co
  if(r!=='never'&&DATE.test(t.until)&&t.until>=t.date)o.until=t.until;
  if(Array.isArray(t.skip)){const s=t.skip.filter(x=>DATE.test(x));if(s.length)o.skip=[...new Set(s)].sort()}
  if(typeof t.list==='string'&&t.list.trim())o.list=t.list.trim().slice(0,20);
+ if(o.time&&[5,15,30,60].includes(+t.before))o.before=+t.before;
+ if(t.snz&&typeof t.snz==='object'){const z={};for(const k in t.snz)if(DATE.test(k)&&Number.isFinite(t.snz[k]))z[k]=Math.round(t.snz[k]);if(Object.keys(z).length)o.snz=z}
  if(Array.isArray(t.sub)){const s=t.sub.filter(x=>x&&typeof x.id==='string'&&typeof x.t==='string'&&x.t.trim()).slice(0,30).map(x=>({id:x.id.slice(0,20),t:x.t.slice(0,60)}));
   if(s.length){o.sub=s;if(t.sd&&typeof t.sd==='object'){const sd={};for(const k in t.sd)if(DATE.test(k)&&Array.isArray(t.sd[k]))sd[k]=t.sd[k].filter(x=>typeof x==='string');if(Object.keys(sd).length)o.sd=sd}}}
  return o}
@@ -451,18 +459,34 @@ let ac=null;function unlock(){try{if(!ac)ac=new(window.AudioContext||window.webk
 function beep(f,t0,dur,vol){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ac.destination);const s=ac.currentTime+t0;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.02);g.gain.exponentialRampToValueAtTime(.001,s+dur);o.start(s);o.stop(s+dur+.05)}
 function chime(){if(!S.sound)return;unlock();beep(880,0,.4,.25);beep(1175,.18,.5,.25);beep(1568,.38,.7,.22)}
 function tick(){if(!S.sound)return;unlock();beep(1046,0,.15,.12);beep(1568,.07,.2,.1)}
-let tm;function toast(m,undo){const t=$('#toast');t.innerHTML='<span>'+esc(m)+'</span>'+(undo?'<button>Undo</button>':'');t.classList.add('on');clearTimeout(tm);
- if(undo)t.querySelector('button').onclick=()=>{clearTimeout(tm);t.classList.remove('on');undo()};tm=setTimeout(()=>t.classList.remove('on'),undo?5000:3200)}
-function due(){const n=new Date(),d=today(),now=pad(n.getHours())+':'+pad(n.getMinutes());let any=false;
- dayTasks(d).forEach(t=>{if(!t.time||isDone(t,d))return;const k=t.id+d;if(S.fired[k]||t.time>now)return;S.fired[k]=1;any=true;
-  const [h,m]=t.time.split(':').map(Number);if((n.getHours()*60+n.getMinutes())-(h*60+m)>30)return;
-  if(!S.notif)return;chime();toast('⏰ '+t.title+' · '+t12(t.time)+(t.note?' — '+t.note:''));if(navigator.vibrate)try{navigator.vibrate([200,100,200])}catch(e){}
-  if(notifOK())try{new Notification('Task Tracker',{body:t.title+' at '+t12(t.time)+(t.note?'\n📝 '+t.note:'')})}catch(e){}});
+let tm;function toast(m,undo,label,ms){const t=$('#toast');t.innerHTML='<span>'+esc(m)+'</span>'+(undo?'<button>'+esc(label||'Undo')+'</button>':'');t.classList.add('on');clearTimeout(tm);
+ if(undo)t.querySelector('button').onclick=()=>{clearTimeout(tm);t.classList.remove('on');undo()};tm=setTimeout(()=>t.classList.remove('on'),ms||(undo?5000:3200))}
+const offOf=d=>Math.round((U(d)-U(today()))/864e5);
+// Reminder minute, counted from today's midnight. Keep in sync with reminders/send.js.
+function remindAt(t,d){const off=offOf(d),[h,m]=t.time.split(':').map(Number),s=t.snz&&Number.isFinite(t.snz[d])?t.snz[d]:null,b=+t.before||0;
+ return{at:off*1440+(s!=null?s:h*60+m-b),key:s!=null?t.id+'_'+d+'_s'+s:b?t.id+'_'+d+'_b'+b+'_'+t.time:t.id+d,snoozed:s!=null}}
+const leadTxt=b=>b>=60?b/60+' hour'+(b>60?'s':''):b+' min';
+function remText(t,d,r){return t.title+(r&&r.snoozed?' (snoozed)':'')+' · '+t12(t.time)+(offOf(d)>0?' tomorrow':'')+(t.before&&!(r&&r.snoozed)?' (in '+leadTxt(t.before)+')':'')}
+function snooze(t,d,mins){const n=new Date();t.snz=t.snz||{};t.snz[d]=n.getHours()*60+n.getMinutes()-offOf(d)*1440+mins;
+ for(const k of Object.keys(t.snz))if(k<dkey(new Date(Date.now()-2*864e5)))delete t.snz[k];persist();toast('💤 Snoozed '+mins+' min: '+t.title)}
+function remindToast(t,d,r){toast('⏰ '+remText(t,d,r)+(t.note?' — '+t.note:''),()=>snooze(t,d,10),'Snooze 10m',9000)}
+function due(){const n=new Date(),nowM=n.getHours()*60+n.getMinutes();let any=false;
+ for(const off of[0,1]){const d=dkey(new Date(n.getFullYear(),n.getMonth(),n.getDate()+off));
+  S.tasks.forEach(t=>{if(!t.time||!occurs(t,d)||isDone(t,d))return;const r=remindAt(t,d);if(S.fired[r.key]||nowM<r.at)return;S.fired[r.key]=1;any=true;
+   if(nowM-r.at>30||!S.notif)return;chime();remindToast(t,d,r);if(navigator.vibrate)try{navigator.vibrate([200,100,200])}catch(e){}
+   if(notifOK())try{new Notification('Task Tracker',{body:remText(t,d,r)+(t.note?'\n📝 '+t.note:''),tag:r.key})}catch(e){}})}
  if(any)try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 setInterval(due,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){due();renderHome()}});
 
 /* midnight rollover */
-let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();S.fired={};renderAll()}},30000);
+let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();const keep=[-1,0,1].map(o=>dkey(new Date(Date.now()+o*864e5)));for(const k in S.fired)if(!keep.some(x=>k.includes(x)))delete S.fired[k];renderAll()}},30000);
+
+/* actions from push notifications */
+function notifAct(act,id,d){const t=S.tasks.find(x=>x.id===id);if(!t||!DATE.test(d||''))return;
+ if(act==='done'){t.done=t.done||{};t.done[d]=true;persist();renderAll();toast('✓ Done: '+t.title)}
+ else if(act==='snooze')snooze(t,d,10);else if(t.time)remindToast(t,d,remindAt(t,d))}
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',e=>{const x=e.data||{};if(x.tt)notifAct(x.act,x.id,x.d)});
+try{const u=new URLSearchParams(location.search);if(u.get('id')){const a=[u.get('act'),u.get('id'),u.get('d')];history.replaceState(null,'',location.pathname);setTimeout(()=>notifAct(...a),800)}}catch(e){}
 
 window.TT={S:()=>S,sync:setSync,toast:toast,confirm:confirmSheet,apply:r=>{S.tasks=r.tasks||[];S.theme=r.theme||S.theme;S.sound=r.sound!==false;S.upd=r.upd;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}renderAll()},reset:()=>{try{localStorage.removeItem(KEY)}catch(e){}S={tasks:[],theme:S.theme,notif:false,sound:true,fired:{},upd:0};renderAll()}};renderAll();setTimeout(due,1500);
 })();

@@ -51,10 +51,15 @@ function occurs(t, d) {
       for (const off of [-1, 0, 1]) { // yesterday, today, tomorrow: handles midnight crossings
         const d = shift(off);
         if (!occurs(t, d) || (t.done && t.done[d])) continue;
-        const key = `${t.id}_${d}_${t.time}`;
+        // Keep in sync with remindAt() in index.html. before = remind N minutes early,
+        // snz[d] = snoozed reminder minute (counted from that day's midnight).
+        const before = [5, 15, 30, 60].includes(+t.before) ? +t.before : 0;
+        const sz = t.snz && Number.isFinite(t.snz[d]) ? t.snz[d] : null;
+        const at = off * 1440 + (sz != null ? sz : h * 60 + m - before);
+        const key = sz != null ? `${t.id}_${d}_s${sz}` : before ? `${t.id}_${d}_${t.time}_b${before}` : `${t.id}_${d}_${t.time}`;
         if (next[key]) continue;
-        const diff = now.min - (off * 1440 + h * 60 + m);
-        if (diff >= -AHEAD && diff <= GRACE) due.push([t, key]);
+        const diff = now.min - at;
+        if (diff >= -AHEAD && diff <= GRACE) due.push([t, key, d, sz != null, before, off]);
       }
     } 
     if (!due.length) continue;
@@ -64,11 +69,12 @@ function occurs(t, d) {
     if (!tokens.length) continue;
     users++;
     const bad = new Set();
-    for (const [t, key] of due) {
+    for (const [t, key, d, snoozed, before, off] of due) {
+      const when = snoozed ? ' (snoozed)' : before ? ` (in ${before >= 60 ? before / 60 + ' hour' : before + ' min'})` : '';
       if (!tokens.length) break;
       const res = await admin.messaging().sendEachForMulticast({
         tokens,
-        data: { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}${t.note ? '\n📝 ' + t.note : ''}`, tag: key },
+        data: { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}${off > 0 ? ' tomorrow' : ''}${when}${t.note ? '\n📝 ' + t.note : ''}`, tag: key, id: String(t.id), d },
         webpush: { headers: { Urgency: 'high', TTL: '3600' } },
       });
       res.responses.forEach((r, i) => {
