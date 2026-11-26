@@ -61,20 +61,35 @@ function occurs(t, d) {
         const diff = now.min - at;
         if (diff >= -AHEAD && diff <= GRACE) due.push([t, key, d, sz != null, before, off]);
       }
-    } 
-    if (!due.length) continue;
+    }
+    // Each message: [key, data]. Task reminders first, then the optional evening preview.
+    const msgs = due.map(([t, key, d, snoozed, before, off]) => {
+      const when = snoozed ? ' (snoozed)' : before ? ` (in ${before >= 60 ? before / 60 + ' hour' : before + ' min'})` : '';
+      return [key, { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}${off > 0 ? ' tomorrow' : ''}${when}${t.note ? '\n📝 ' + t.note : ''}`, tag: key, id: String(t.id), d }];
+    });
+    // Evening preview at 8 PM local: tomorrow's open tasks (setting "eve" in the app).
+    const EVE = 20 * 60, ekey = `eve_${now.date}`;
+    if (s.eve && !next[ekey] && now.min - EVE >= -AHEAD && now.min - EVE <= GRACE) {
+      const tm = shift(1), list = (s.tasks || []).filter(t => occurs(t, tm) && !(t.done && t.done[tm]))
+        .sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+      if (list.length) {
+        const first = list.find(t => t.time && /^\d\d:\d\d$/.test(t.time));
+        const lines = list.slice(0, 4).map(t => '• ' + (t.time && /^\d\d:\d\d$/.test(t.time) ? t12(t.time) + ' ' : '') + t.title);
+        msgs.push([ekey, { title: `🌙 Tomorrow: ${list.length} task${list.length > 1 ? 's' : ''}`, body: (first ? `First up: ${first.title} at ${t12(first.time)}\n` : '') + lines.join('\n') + (list.length > 4 ? `\n+${list.length - 4} more` : ''), tag: ekey }]);
+      } else next[ekey] = 1;
+    }
+    if (!msgs.length) { if (next[ekey] && !(data.sent || {})[ekey]) await u.ref.update({ sent: next }); continue; }
 
     const dev = await u.ref.collection('devices').get();
     let tokens = dev.docs.map(d => d.get('token')).filter(Boolean);
     if (!tokens.length) continue;
     users++;
     const bad = new Set();
-    for (const [t, key, d, snoozed, before, off] of due) {
-      const when = snoozed ? ' (snoozed)' : before ? ` (in ${before >= 60 ? before / 60 + ' hour' : before + ' min'})` : '';
+    for (const [key, payload] of msgs) {
       if (!tokens.length) break;
       const res = await admin.messaging().sendEachForMulticast({
         tokens,
-        data: { title: '⏰ Task Tracker', body: `${t.prio === 'high' ? '❗ ' : ''}${t.title} at ${t12(t.time)}${off > 0 ? ' tomorrow' : ''}${when}${t.note ? '\n📝 ' + t.note : ''}`, tag: key, id: String(t.id), d },
+        data: payload,
         webpush: { headers: { Urgency: 'high', TTL: '3600' } },
       });
       res.responses.forEach((r, i) => {

@@ -22,7 +22,7 @@ async function login(){localStorage.removeItem('tt_local');const p=new GoogleAut
   else if(e.code!=='auth/popup-closed-by-user')$('#gErr').textContent='Sign-in failed ('+(e.code||'error')+')'}}
 
 function save(S){if(!uid)return;clearTimeout(timer);timer=setTimeout(async()=>{
- try{await setDoc(doc(db,'users',uid),{json:JSON.stringify({tasks:S.tasks,theme:S.theme,sound:S.sound,upd:S.upd}),upd:S.upd,tz:Intl.DateTimeFormat().resolvedOptions().timeZone},{merge:true});T().sync('Synced to your account')}
+ try{await setDoc(doc(db,'users',uid),{json:JSON.stringify(T().payload?T().payload():{tasks:S.tasks,theme:S.theme,sound:S.sound,upd:S.upd}),upd:S.upd,tz:Intl.DateTimeFormat().resolvedOptions().timeZone},{merge:true});T().sync('Synced to your account')}
  catch(e){T().sync('Sync paused, saved on this device')}},500)}
 
 async function push(){
